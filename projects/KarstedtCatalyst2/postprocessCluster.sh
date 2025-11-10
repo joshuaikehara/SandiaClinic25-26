@@ -116,7 +116,7 @@ primitive lattice vectors
   0.00000000000     60.0000000000     0.00000000000
   0.00000000000     0.00000000000     60.0000000000
 grid dimensions
-       96  96  96
+       128  128  128
 atom types
  6
 atom file
