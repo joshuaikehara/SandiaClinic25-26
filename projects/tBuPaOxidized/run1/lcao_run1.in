@@ -1,0 +1,83 @@
+do setup
+do iters
+do force
+do relax
+do post
+setup data
+title
+title2
+functional
+ PBE-SP
+spin polarization
+ 1.0
+dimension of system (0=cluster ... 3=bulk)
+ 0
+coordinates
+CARTESIAN
+scale
+ 1
+primitive lattice vectors
+  60.0000000000     0.00000000000     0.00000000000
+  0.00000000000     60.0000000000     0.00000000000
+  0.00000000000     0.00000000000     60.0000000000
+grid dimensions
+       128  128  128
+atom types
+ 6
+atom file
+ O = O.atm
+atom file
+ H = H.atm
+atom file
+ C = C.atm
+atom file
+ Pt = Pt.atm
+atom file
+ P = P.atm
+atom file
+ Si = Si.atm
+number of atoms in unit cell
+  18
+atom, type, position; step#     0
+AT1   P    -0.8986402966   3.5972257001  -0.8586159002
+AT2   C     2.2730191109   4.6979154994   0.2674529192
+AT3   C     2.0008229795   7.3309841029   1.4595109700
+AT4   C     4.0848694915   4.8259633324  -1.9968545549
+AT5   C     3.2876696859   2.8211719284   2.2359426870
+AT6   O    -2.3872530469   5.5674729131  -3.0176089449
+AT7   O    -0.9545194941   0.5695067212  -2.1199513058
+AT8   O    -2.7909552098   3.4578206139   1.3785551087
+AT9   H     0.6811328353   7.2685664535   3.0917428954
+AT10  H     1.2501860223   8.7006386022   0.0557658139
+AT11  H     3.8608802700   8.0304283831   2.1394721753
+AT12  H     3.3588367667   6.1625287296  -3.4449137854
+AT13  H     4.2881284188   2.9351790973  -2.8870477763
+AT14  H     5.9861039113   5.4775030588  -1.3870210811
+AT15  H     1.9844201579   2.6980751775   3.8778878039
+AT16  H     5.1743343184   3.4269802858   2.9319098713
+AT17  H     3.4744313054   0.9051031595   1.3967342727
+AT18  H    -0.0697497862   0.7241618961  -3.7614995803
+origin offset
+ 0 0 0
+end setup phase data
+run phase input data
+history
+ 8
+no ges
+states
+ 200
+temperature
+ 0.01
+iterations
+ 300
+blend ratio
+0.300
+convergence criterion
+ 0.02
+geometry relaxation
+gmethod
+asd
+gsteps
+ 200
+end geometry relaxation
+end run phase data
