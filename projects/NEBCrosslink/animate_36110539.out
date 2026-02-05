@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "/ocean/projects/mat250017p/desantos/projects/NEBCrosslink/aes_reorder.py", line 1, in <module>
-    from ase.io import read, write
-ModuleNotFoundError: No module named 'ase'

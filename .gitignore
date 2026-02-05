@@ -8,5 +8,6 @@ trashdir/
 
 # Ignore Seqquest Executable (Copyright by Sandia)
 seqquest_parallel-20251006T044228Z-1-001.zip
+seqquest_parallel_IDPP
 seqquest_parallel
 seqquest_serial

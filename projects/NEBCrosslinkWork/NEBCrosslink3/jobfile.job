@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH --job-name=NEBCrosslink2
+#SBATCH -p RM-shared
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=36
+#SBATCH -t 14:00:00
+
+# Clean environment
+module purge
+
+# 1. Load GCC first to provide the newer libgfortran
+module load gcc/10.2.0  # Or any version 10+ available
+
+# 2. Load the specific Intel OneAPI components
+module load intel-compiler
+module load intel-mpi
+module load intel-mkl
+
+# 3. Handle the library paths
+export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
+
+cd /ocean/projects/mat250017p/desantos/projects/NEBCrosslinkWork/NEBCrosslink3         # update based on project location 
+srun /ocean/projects/mat250017p/desantos/seqquest_parallel/quest_265a.x
