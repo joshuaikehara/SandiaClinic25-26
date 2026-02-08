@@ -7,10 +7,10 @@ trashdir/
 *.grd0
 *.grd
 *.h0*
-.h0exc
-.h0nl
-.h0t
-.h0vxc
+*.h0exc
+*.h0nl
+*.h0t
+*.h0vxc
 
 # Ignore Seqquest Executable (Copyright by Sandia)
 seqquest_parallel-20251006T044228Z-1-001.zip

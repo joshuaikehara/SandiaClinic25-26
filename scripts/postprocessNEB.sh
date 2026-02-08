@@ -6,260 +6,82 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 
-# Luis Lorenzana (HMC 25') [Initially for Slabs]
-# Harvey Mudd College
-# Sandia National Laboratories Clinic 2025
-# Email: llorenzana@g.hmc.edu
-
-# Roman De Santos (HMC 26') [Adapted script for tBuPa clusters (dimension 0)]
+# Roman De Santos (HMC 26') [Refactored for NEB process and readability]
 # Harvey Mudd College
 # Sandia National Laboratories Clinic 2025-26
 # Email: rdesantos@hmc.edu
 
 # Postprocess script:
-# Inputs: lcao.in and *.atm
+# Inputs: lcao.in and lcao.neb_geom
 # Outputs:
 # Top Level Directory: 
 # - lcao.in (with updated coordinate positions)
 # - Will keep *.atm, *.sh, *.job, everything else will go in trashdir 
 # - runN Directory: Everytime you run postprocess.sh; N+1
-# -- lcao_runN.in (Original lcao.in file)
-# -- lcao_runN.out (Output file for N run)
-# -- lcao_runN.hist (History file with coordinates and forces at every G step)
-# -- lcao_runN.geom (Last updated coordinate postion of structure)
-# -- lcao_runN.xyz (Visualization file to see strecture in VESTA or Jmol)
+# -- lcao.in (Original lcao.in file)
+# -- lcao.out (Output file for N run)
+# -- lcao.hist (History file with coordinates and forces at every G step)
+# -- lcao.geom (Last updated coordinate postion of structure)
+# -- lcao.xyz (Visualization file to see strecture in VESTA or Jmol or IQmol)
 
-###############################################################################
-########################## Determine new run number ###########################
-###############################################################################
-max=0
-for d in run*; do
-    if [ -d "$d" ]; then
-        num="${d#run}"
-        # Only consider numeric directories
-        if [[ "$num" =~ ^[0-9]+$ ]]; then
-            if [ "$num" -gt "$max" ]; then
-                max="$num"
-            fi
+
+# --- 1. IDENTIFY RUN DIRECTORY ---
+max_val=-1
+for d in run*/ ; do
+    if [[ $d =~ run([0-9]+)/ ]]; then
+        num="${BASH_REMATCH[1]}"
+        if (( num > max_val )); then
+            max_val=$num
         fi
     fi
 done
-run_num=$((max+1))
-run_dir="run${run_num}"
-mkdir -p "$run_dir"
-echo "Using run number: ${run_num} (directory: ${run_dir})"
 
-###############################################################################
-######### Archive old lcao.in, lcao.out, and lcao.xyz (if present) ############
-###############################################################################
-archive_file () {
-    local fname="$1" # original file name
-    local ext="$2"   # extension (e.g., in, out, xyz)
-    if [ -f "$fname" ]; then
-        newname="lcao_run${run_num}.${ext}"
-        mv "$fname" "$newname"
-        mv "$newname" "$run_dir/"
-        echo "Archived $fname as $newname into ${run_dir}/"
-    fi
-}
+next_val=$((max_val + 1))
+RUN_DIR="run${next_val}"
+BASE_PATH=$(pwd)
+FULL_RUN_PATH="${BASE_PATH}/${RUN_DIR}"
 
-# lcao.in and lcao.hist will be archived later (needed for processing)
-archive_file "lcao.out" "out"
-archive_file "lcao.xyz" "xyz"
+echo "Creating archive: $RUN_DIR"
+mkdir -p "$RUN_DIR"
+mkdir -p "trashdir"
 
-###############################################################################
-##################### Find the .in file to process ##########################
-###############################################################################
-in_file_count=$(ls -1 *.in 2>/dev/null | wc -l)
-if [ "$in_file_count" -eq 0 ]; then
-    echo "No .in file found in the current directory. Exiting."
-    exit 1
-elif [ "$in_file_count" -gt 1 ]; then
-    echo "Multiple .in files found. Using the first one found."
-fi
-INPUT=$(ls *.in | head -n 1)
-echo "Processing input file: $INPUT"
+# --- 2. MOVE AND PRESERVE RESULTS ---
+# We move the current files into the archive folder first.
+# This preserves the "old" lcao.in inside the runN directory.
+mv lcao.out lcao.neb_geom lcao.neb_post lcao.stat lcao.hist lcao.in lcao.geom[0-9]* "$RUN_DIR" 2>/dev/null
 
-###############################################################################
-########## Generate new lcao.in file (remains in current directory) ###########
-###############################################################################
+# Clean up other auxiliary files
+shopt -s extglob
+mv !(*.sh|*.job|*.jobfile|*.atm|run*|trashdir) trashdir/ 2>/dev/null
 
-############### YOU MAY NEED TO CHANGE THIS TO FIT YOUR SYSTEM ################
+# --- 3. POST-PROCESSING (Inside Run Directory) ---
+echo "Processing XYZ images in $RUN_DIR..."
+module purge
+module load anaconda3/2022.10
+module load ffmpeg
 
+cd "$FULL_RUN_PATH"
+python3 /ocean/projects/mat250017p/desantos/scripts/NEBimages2xyz.py "${FULL_RUN_PATH}/lcao.neb_geom" "out"
 
-# Count the number of atom lines in the .in file
-ATOM_COUNT=$(awk '($0 !~ /atom,/) && NF>=4 { count++ } END { print count }' "$INPUT")
+# --- 4. GENERATE NEW LCAO.IN AT BASE_PATH ---
+echo "Splicing coordinates for the next iteration..."
 
-# Write the fixed header portion to new lcao.in
-cat << 'EOF' > "lcao.in"
-do setup
-do iters
-do force
-do relax
-do neb
-setup data
-dimension of system (0=cluster ... 3=bulk)
-0
-primitive lattice vectors
-  45.0000000000     0.00000000000     0.00000000000
-  0.00000000000     45.0000000000     0.00000000000
-  0.00000000000     0.00000000000     45.0000000000
-grid dimensions
-      225  225  225
-atom types
- 6
-atom file
- O = O.atm
-atom file
- H = H.atm
-atom file
- C = C.atm
-atom file
- Pt = Pt.atm
-atom file
- P = P.atm
-atom file
- Si = Si.atm
-EOF
+# We reference the files we just moved into the run directory
+line_in=$(grep -n "image number in NEB" lcao.in | head -n 1 | cut -d: -f1)
+line_geom=$(grep -n "image number in NEB" lcao.neb_geom | head -n 1 | cut -d: -f1)
 
-###############################################################################
-
-# Append the computed atom count.
-printf "  %d\n" "$ATOM_COUNT" >> "lcao.in"
-
-# Append atom block header.
-echo "atom, type, position;  step#     0" >> "lcao.in"
-
-# Process the .geom file and append the atom data.
-awk -v fmt="   %-5s  %-2s   %14.10f   %14.10f   %14.10f\n" '
-/atom, type, position;/ { next }
-NF == 5 {
-    printf fmt, $1, $2, $3, $4, $5;
-}
-' "$INPUT" >> "lcao.in"
-
-# Append the fixed footer.
-cat << 'EOF' >> "lcao.in"
-origin offset
- 0 0 0
-end setup phase data
-run phase input data
-history
- 8
-no ges
-states
- 200
-temperature
- 0.01
-iterations
- 300
-blend ratio
-0.300
-convergence criterion
- 0.02
-geometry relaxation
-gmethod
-asd
-gsteps
- 60
-end geometry relaxation
-end run phase data
-EOF
-
-echo "New lcao.in file generated in the current directory."
-
-###############################################################################
-########################## Generate new lcao.xyz file #########################
-###############################################################################
-
-# Conversion factor: bohr to angstrom times scale (0.529177)
-FACTOR=0.529177
-
-# Count non-empty lines (excluding header lines that contain "atom, type, position;")
-NUM_ATOMS=$(grep -v 'atom, type, position;' "$INPUT" | grep -cv '^\s*$')
-
-# Create temporary lcao.xyz file.
-tmp_xyz="tmp_lcao.xyz"
-{
-    echo "$NUM_ATOMS"
-    echo ".geom to .xyz and scaled by factor of $FACTOR"
-    awk -v factor="$FACTOR" '
-    {
-        if ($0 ~ /atom, type, position;/) next;
-        if (NF==5 && $1 ~ /^[0-9]+$/) {
-            symbol = $2;
-            x = $3 * factor;
-            y = $4 * factor;
-            z = $5 * factor;
-        } else if (NF>=4) {
-        symbol = $2;
-        x = $3 * factor;
-        y = $4 * factor;
-        z = $5 * factor;
-        } else {
-            next;
-        }
-        printf "%s %.10f %.10f %.10f\n", symbol, x, y, z;
-    }' "$INPUT"
-} > "$tmp_xyz"
-
-# Rename new lcao.xyz as lcao_runN.xyz and move it into runN.
-new_xyz="lcao_run${run_num}.xyz"
-mv "$tmp_xyz" "$new_xyz"
-mv "$new_xyz" "$run_dir/"
-echo "New lcao.xyz file generated as ${run_dir}/${new_xyz}."
-
-# Archive lcao.geom and lcao.hist (if present) into runN.
-if [ -f "lcao.geom" ]; then
-    newname="lcao_run${run_num}.geom"
-    mv "lcao.geom" "$newname"
-    mv "$newname" "$run_dir/"
-    echo "Archived lcao.geom as $newname into ${run_dir}/"
+if [[ -n "$line_in" && -n "$line_geom" ]]; then
+    # Create the NEW file back at the project root (BASE_PATH)
+    # 1. Take the parameters/header from the archived lcao.in
+    head -n $((line_in - 1)) lcao.in > "${BASE_PATH}/lcao.in"
+    # 2. Append the updated coordinates from the archived lcao.neb_geom
+    tail -n +$line_geom lcao.neb_geom >> "${BASE_PATH}/lcao.in"
+    
+    echo "SUCCESS: New lcao.in generated at ${BASE_PATH}"
+    echo "REFERENCE: Original input preserved at ${FULL_RUN_PATH}/lcao.in"
+else
+    echo "ERROR: 'image number in NEB' keyword missing. Could not generate new lcao.in."
 fi
 
-if [ -f "lcao.hist" ]; then
-    newname="lcao_run${run_num}.hist"
-    mv "lcao.hist" "$newname"
-    mv "$newname" "$run_dir/"
-    echo "Archived lcao.hist as $newname into ${run_dir}/"
-fi
-
-###############################################################################
-############################### Cleanup Section ###############################
-###############################################################################
-echo "Starting cleanup..."
-
-# In the cleanup, we want to leave in the current directory:
-# - All *.atm files
-# - All *.sh files
-# - All *.job files
-# - The new lcao.in file
-# - All runN directories (which contain archived old files)
-# Everything else will be moved into trashdir.
-
-mkdir -p trashdir
-
-for item in *; do
-    # Skip trashdir itself
-    if [ "$item" == "trashdir" ]; then
-        continue
-    fi
-    # For directories: keep those starting with "run"
-    if [ -d "$item" ]; then
-        if [[ "$item" == run* ]]; then
-            continue
-        else
-            mv "$item" trashdir/
-        fi
-    else
-        # For files, preserve *.atm, *.sh, *.job, and the new lcao.in.
-        case "$item" in
-            *.atm|*.sh|*.job|lcao.in)
-                continue
-                ;;
-            *)
-                mv "$item" trashdir/
-                ;;
-        esac
-    fi
-done
+cd "$BASE_PATH"
+echo "Workflow complete. Ready for next submission."

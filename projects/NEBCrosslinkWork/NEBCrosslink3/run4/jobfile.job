@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=NEBCrosslink2
+#SBATCH -p RM-shared
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=60
+#SBATCH -t 14:00:00
+
+# Clean environment
+module purge
+
+# 1. Load GCC (for system libs)
+module load gcc/10.2.0
+
+# 2. Load Intel Stack
+module load intel-compiler
+module load intel-mpi
+module load intel-mkl
+
+# 3. Stack Size (Crucial for Intel Fortran apps to prevent crashes)
+ulimit -s unlimited
+
+# 4. Run using Intel's mpirun
+# Note: We use $SLURM_NTASKS to match the SBATCH directive automatically
+cd /ocean/projects/mat250017p/desantos/projects/NEBCrosslinkWork/NEBCrosslink3         # update based on project location 
+mpirun -np $SLURM_NTASKS /ocean/projects/mat250017p/desantos/seqquest_parallel/quest_265a.x
