@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH --job-name=NEBCrosslink3
+#SBATCH -p RM-shared
+#SBATCH -N 1
+#SBATCH --ntasks=6
+#SBATCH -t 04:00:00
+
+module purge
+module load gcc/10.2.0
+module load openmpi/4.0.5-gcc10.2.0
+module load intel-mkl
+
+ulimit -s unlimited
+
+# 3. Handle the library paths
+export LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH
+
+cd /ocean/projects/mat250017p/jikehara/SandiaClinic25-26/projects/NEBtest
+
+# Use --overload-allowed if you really want to run 60 tasks on fewer than 60 cores
+# But for DFT (SeqQuest), it's better to run 1 task per 1 physical core.
+mpirun -np $SLURM_NTASKS --bind-to none /ocean/projects/mat250017p/jikehara/SandiaClinic25-26/seqquest_parallel/quest_265a.x

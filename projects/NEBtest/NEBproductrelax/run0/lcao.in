@@ -1,0 +1,54 @@
+do setup
+do iters
+do force
+do relax
+setup data
+functional
+ PBE-SP
+spin polarization
+ 1.0
+dimension of system (0=cluster ... 3=bulk)
+0
+primitive lattice vectors
+  45.0000000000     0.00000000000     0.00000000000
+  0.00000000000     45.0000000000     0.00000000000
+  0.00000000000     0.00000000000     45.0000000000
+grid dimensions
+      150  150  150
+atom types
+ 2
+atom file
+ O = O.atm
+atom file
+ H = H.atm
+number of atoms in unit cell
+  6
+atom, type, position;
+  AT1   H     1.9393501931   1.5150878114  -1.9619891104
+  AT2   H     2.5637912487   1.4597755317   0.9300853371
+  AT3   O    -3.0821997792  -0.7201934715   0.6972144035
+  AT4   O     3.0868485051   0.7278468618  -0.7103668964
+  AT5   H    -2.4234035050  -1.4368531554  -0.9008323788
+  AT6   H    -2.1170033332  -1.5992562069   2.0379938897
+end setup phase data
+run phase input data
+history
+ 8
+no ges
+states
+ 200
+temperature
+ 0.01
+iterations
+ 300
+blend ratio
+0.05
+convergence criterion
+ 0.02
+geometry relaxation
+gsteps
+500
+gmethod
+ASD
+end geometry relaxation
+end run phase data
